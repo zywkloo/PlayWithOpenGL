@@ -1,0 +1,2 @@
+﻿  main.cpp
+c:\yiwei_study_cs\comp 2501\demo-first\texturedemo\texturedemo\main.cpp(5): fatal error C1083: Cannot open include file: 'GL/glew.h': No such file or directory
