@@ -60,12 +60,14 @@ uniform float time;\n\
 \n\
 void main()\n\
 {\n\
-	vec4 color = texture2D(texBird, uv_interp) ;\n\
-	gl_FragColor = vec4(color.r,color.g,color.b,color.a);\n\
-    if((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.9)\n\
+	vec4 color = texture2D(texBird, 2*uv_interp);\n\
+	vec4 side = texture2D(texBird,time*5*uv_interp.ts);\n\
+	gl_FragColor = mix(side.rgba,color.xxxw,time);\n\
+    if(((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.95) ||\n\
+	(uv_interp.t > 0.97) || (uv_interp.t < 0.03))\n\
 	{\n\
-		//discard; \n\
-		gl_FragColor = vec4(color.r,color.g,color.b,0);\n\
+		discard; \n\
+		//gl_FragColor = vec4(color.r,color.g,color.b,0);\n\
 	} \n\
  //gl_FragColor = color_interp;\n\
 }";
@@ -236,7 +238,7 @@ int main(void){
 
 		// Load texture
 		GLuint tex;
-		glGenTextures(1, &tex);
+		glGenTextures(2, &tex);
 		glBindTexture(GL_TEXTURE_2D, tex);
 
 		int width, height;
@@ -244,8 +246,8 @@ int main(void){
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 		SOIL_free_image_data(image);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -254,9 +256,8 @@ int main(void){
 		GLint timeloc = glGetUniformLocation(program, "time");
 		GLint xLoc = glGetUniformLocation(program, "x");
 		//now, you can set it:
-
 		glUniform1f(timeloc, 0.1);
-		glUniform2f(xLoc, 0.2f, 0.2f);
+		glUniform2f(xLoc, 1.2f, 0.2f);
 
         // Set event callbacks
         glfwSetKeyCallback(window, KeyCallback);
@@ -281,18 +282,23 @@ int main(void){
             // Select proper shader program to use
             glUseProgram(program);
 			glUniform1f(timeloc, simpletime);
-			GLfloat realTime = glfwGetTime();
-			GLfloat vx = 0.8*simpletime;
-			GLfloat vy = 0.8*simpletime;
-			glUniform2f(xLoc, vx + 0.1 * sin(realTime), vy + 0.1 * cos(realTime));
+			//GLfloat realTime = glfwGetTime();
 
+			glUniform2f(xLoc,  0.3 * sin(10*simpletime), 0.1 * cos(10*simpletime));
 
 
 			// Draw 
 			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
 
 
-			glDrawArrays(GL_TRIANGLES, 0, 6); // if glDrawArrays is used, glDrawElements will be ignored 
+			glUniform2f(xLoc,  -0.2 * sin(2*simpletime),  -0.1 * cos(9*simpletime));
+
+
+			// Draw 
+			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
+
+
+			//glDrawArrays(GL_TRIANGLES, 0, 6); // if glDrawArrays is used, glDrawElements will be ignored 
 
             // Update other events like input handling
             glfwPollEvents();
