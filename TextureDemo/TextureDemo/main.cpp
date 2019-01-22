@@ -1,3 +1,5 @@
+//Yiwei Zhang 101071022
+
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -7,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> //
 #include <SOIL/SOIL.h> // read image file
+
 
 // Macro for printing exceptions
 #define PrintException(exception_object)\
@@ -18,6 +21,18 @@ const unsigned int window_width_g = 800;
 const unsigned int window_height_g = 600;
 const glm::vec3 viewport_background_color_g(0.0, 0.6, 0.6);
 
+//============================================================================ 
+const GLint maxObjs = 128;
+typedef  struct {
+	GLfloat x;
+	GLfloat y;
+	GLfloat dx;
+	GLfloat dy;
+} gameObj;
+
+gameObj objArr[maxObjs];
+GLint objArrSize=0;
+//================================================================================
 
 // Source code of vertex shader
 const char *source_vp = "#version 130\n\
@@ -40,7 +55,7 @@ out vec4 color_interp;\n\
 void main()\n\
 {\n\
    \n\
-    gl_Position =  vec4(vertex + x , 0.0, 1.0);\n\
+    gl_Position =  vec4(vertex +x  , 0.0, 1.0);\n\
     color_interp = vec4(color, 1.0);\n\
 	uv_interp = uv ;\n\
  }";
@@ -61,10 +76,10 @@ uniform float time;\n\
 void main()\n\
 {\n\
 	vec4 color = texture2D(texBird, 2*uv_interp);\n\
-	vec4 side = texture2D(texBird,time*5*uv_interp.ts);\n\
-	gl_FragColor = mix(side.rgba,color.xxxw,time);\n\
-    if(((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.95) ||\n\
-	(uv_interp.t > 0.97) || (uv_interp.t < 0.03))\n\
+	vec4 side = texture2D(texBird,uv_interp.ts);\n\
+	gl_FragColor = mix(side.rgba,color.yyyw,time);\n\
+    if(((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.90) ||\n\
+	(uv_interp.t > 0.95) || (uv_interp.t < 0.03))\n\
 	{\n\
 		discard; \n\
 		//gl_FragColor = vec4(color.r,color.g,color.b,0);\n\
@@ -104,10 +119,10 @@ int CreateSquare(void) {
 	GLfloat vertex[]  = {
 		//  square (two triangles)
 		   //  Position      Color             Texcoords
-		-0.5f, 0.5f,	 1.0f, 0.0f, 0.0f,		0.0f, 0.0f, // Top-left
-		0.5f, 0.5f,		 1.0f, 1.0f, 0.0f,		1.0f, 0.0f, // Top-right
-		0.5f, -0.5f,	 1.0f, 0.0f, 1.0f,		1.0f, 1.0f, // Bottom-right
-		-0.5f, -0.5f,	 0.0f, 0.0f, 1.0f,		0.0f, 1.0f  // Bottom-left
+		-0.2f, 0.2f,	 1.0f, 0.0f, 0.0f,		0.0f, 0.0f, // Top-left
+		0.2f, 0.2f,		 1.0f, 1.0f, 0.0f,		1.0f, 0.0f, // Top-right
+		0.2f, -0.2f,	 1.0f, 0.0f, 1.0f,		1.0f, 1.0f, // Bottom-right
+		-0.2f, -0.2f,	 0.0f, 0.0f, 1.0f,		0.0f, 1.0f  // Bottom-left
 	};
 
 
@@ -238,11 +253,11 @@ int main(void){
 
 		// Load texture
 		GLuint tex;
-		glGenTextures(2, &tex);
+		glGenTextures(1, &tex);
 		glBindTexture(GL_TEXTURE_2D, tex);
 
 		int width, height;
-		unsigned char* image = SOIL_load_image("parrot.png", &width, &height, 0, SOIL_LOAD_RGBA);
+		unsigned char* image = SOIL_load_image("Illidan.png", &width, &height, 0, SOIL_LOAD_RGBA);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 		SOIL_free_image_data(image);
 
@@ -253,19 +268,39 @@ int main(void){
 
 		// set time uniform.
 		// first, get location:
+
+
+
 		GLint timeloc = glGetUniformLocation(program, "time");
 		GLint xLoc = glGetUniformLocation(program, "x");
+
+
+
 		//now, you can set it:
-		glUniform1f(timeloc, 0.1);
-		glUniform2f(xLoc, 1.2f, 0.2f);
+		glUniform1f(timeloc, 0.1f);
+		glUniform2f(xLoc, 0.2f, 0.2f);
 
         // Set event callbacks
         glfwSetKeyCallback(window, KeyCallback);
         glfwSetFramebufferSizeCallback(window, ResizeCallback);
 
+		//CHANGES: struct init
+		//========================================================================================
+		for (int i = 0; i < 5; ++i) {
+			GLfloat x = GLfloat(0.5)*GLfloat(rand()) / GLfloat(RAND_MAX);
+			GLfloat y = GLfloat(0.5)*GLfloat(rand()) / GLfloat(RAND_MAX);
+			GLfloat dx = GLfloat(0.008)*GLfloat(rand()) / GLfloat(RAND_MAX);
+			GLfloat dy = GLfloat(0.008)*GLfloat(rand()) / GLfloat(RAND_MAX);
+			objArr[i] = { x,y,dx,dy };
+			printf("x,y: %f,%f  dx,dy:%f,%f\n", x, y, dx, dy);
+			objArrSize++;
+		}
+		//=========================================================================================
+
+
         // Run the main loop
         bool animating = 1;
-		float simpletime = 0.0;
+		GLfloat simpletime = 0.0;
         while (!glfwWindowShouldClose(window)){
             // Clear background
             glClearColor(viewport_background_color_g[0], 
@@ -274,7 +309,7 @@ int main(void){
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			// update "simple time"
-			simpletime += 0.0001;
+			simpletime += GLfloat(0.0001);
 			if (simpletime > 1.0) simpletime = 0.0; // reset
 
             // Draw the square
@@ -282,23 +317,27 @@ int main(void){
             // Select proper shader program to use
             glUseProgram(program);
 			glUniform1f(timeloc, simpletime);
-			//GLfloat realTime = glfwGetTime();
-
-			glUniform2f(xLoc,  0.3 * sin(10*simpletime), 0.1 * cos(10*simpletime));
-
-
-			// Draw 
-			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
-
-
-			glUniform2f(xLoc,  -0.2 * sin(2*simpletime),  -0.1 * cos(9*simpletime));
-
-
-			// Draw 
-			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
-
-
+			GLfloat realTime = glfwGetTime();
+	
+			
+			for (int j = 0; j < objArrSize; ++j) {
+				objArr[j].x += objArr[j].dx;
+				objArr[j].y += objArr[j].dy;
+				if (objArr[j].x-0.2 < -1 || objArr[j].x+0.2 > 1) {
+					objArr[j].dx = -objArr[j].dx;
+				} else if (objArr[j].y -0.2 < -1 || objArr[j].y +0.2 > 1) {
+					objArr[j].dy = -objArr[j].dy;
+				}
+				printf("/n %d /n  x,y: %f,%f  dx,dy:%f,%f\n",j ,objArr[j].x, objArr[j].y, objArr[j].dx, objArr[j].dy);
+				glUniform2f(xLoc, GLfloat(objArr[j].x), GLfloat(objArr[j].y));
+				glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
+			}
+			
+			
 			//glDrawArrays(GL_TRIANGLES, 0, 6); // if glDrawArrays is used, glDrawElements will be ignored 
+		//	glUniform2f(xLoc, 0.4f, 0.4f);
+			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
+
 
             // Update other events like input handling
             glfwPollEvents();
