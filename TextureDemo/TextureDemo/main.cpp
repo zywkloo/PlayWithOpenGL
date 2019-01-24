@@ -1,4 +1,4 @@
-//Yiwei Zhang 101071022
+//V 1.2
 //	Basic: add the uniform value "offset" to let the obj move
 //         collision detectoin between obj and walls
 //   	   colour changing respectively
