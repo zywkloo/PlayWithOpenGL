@@ -1,4 +1,11 @@
 //Yiwei Zhang 101071022
+//	Basic: add the uniform value "offset" to let the obj move
+//         collision detectoin between obj and walls
+//   	   colour changing respectively
+//	Bonus:press S to stop all move  , press d to continue
+//=======================================
+//All changes are between those quation lines like this
+//=======================================
 
 #include <iostream>
 #include <stdexcept>
@@ -23,15 +30,22 @@ const glm::vec3 viewport_background_color_g(0.0, 0.6, 0.6);
 
 //============================================================================ 
 const GLint maxObjs = 128;
+//def a struct named gameObj ,including attributes listed below : vec2 position, vec2 velocity, rgba
 typedef  struct {
-	GLfloat x;
-	GLfloat y;
-	GLfloat dx;
-	GLfloat dy;
+	GLfloat x;  //x coordinate
+	GLfloat y;	//y coordinate
+	GLfloat dx;	//velocity x coordinate
+	GLfloat dy;	//velocity y coordinate 
+	GLfloat r;  //rgb
+	GLfloat g;
+	GLfloat b; 
+	GLfloat a;  //alpha value
 } gameObj;
 
-gameObj objArr[maxObjs];
-GLint objArrSize=0;
+gameObj objArr[maxObjs];  //creat a gameObj array
+GLint objArrSize=0;   //the initial size of the array is 0;
+
+GLboolean allMoveStop = false;
 //================================================================================
 
 // Source code of vertex shader
@@ -42,12 +56,15 @@ in vec2 vertex;\n\
 in vec3 color;\n\
 in vec2 uv;\n\
 out vec2 uv_interp;\n\
-\n\
 // Uniform (global) buffer\n\
 uniform float time;\n\
-uniform vec2 x ;\n\
-//uniform float scale ;\n\
-// nothing here for now\n\
+//                      \n\
+//set a new uniform value offset\n\
+//===================================================================;\n\
+//                      \n\
+uniform vec2 offset ;\n\
+//                      \n\
+//===================================================================;\n\
 // Attributes forwarded to the fragment shader\n\
 out vec4 color_interp;\n\
 \n\
@@ -55,8 +72,10 @@ out vec4 color_interp;\n\
 void main()\n\
 {\n\
    \n\
-    gl_Position =  vec4(vertex +x  , 0.0, 1.0);\n\
-    color_interp = vec4(color, 1.0);\n\
+    gl_Position =  vec4(vertex + offset, 0.0, 1.0);\n\
+	color_interp =  vec4(color,1.0);\n\
+	//color_interp =  colorIn;\n\
+    //color_interp =  mix(vec4(color,1.0),colorIn,0.3);\n\
 	uv_interp = uv ;\n\
  }";
 
@@ -68,18 +87,25 @@ const char *source_fp = "\n\
 // Attributes passed from the vertex shader\n\
 in vec4 color_interp;\n\
 in vec2 uv_interp;\n\
-\n\
 uniform sampler2D texBird;\n\
 uniform float time;\n\
+//                      \n\
+//set a new uniform vec4 colorIn\n\
+//===================================================================;\n\
+//                      \n\
+uniform vec4 colorIn;\n\
+//                      \n\
+//===================================================================;\n\
 \n\
 \n\
 void main()\n\
 {\n\
-	vec4 color = texture2D(texBird, 2*uv_interp);\n\
-	vec4 side = texture2D(texBird,uv_interp.ts);\n\
-	gl_FragColor = mix(side.rgba,color.yyyw,time);\n\
-    if(((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.90) ||\n\
-	(uv_interp.t > 0.95) || (uv_interp.t < 0.03))\n\
+	vec4 color = texture2D(texBird, 2*uv_interp*(time+0.5));\n\
+	vec4 side = colorIn;\n\
+	//gl_FragColor =  color;\n\
+	gl_FragColor =  mix(color,colorIn,0.3);\n\
+    if(((gl_FragColor.r + gl_FragColor.g + gl_FragColor.b)/3 > 0.7) ||\n\
+	(uv_interp.t > 0.95) || (uv_interp.t < 0.05))\n\
 	{\n\
 		discard; \n\
 		//gl_FragColor = vec4(color.r,color.g,color.b,0);\n\
@@ -91,11 +117,22 @@ void main()\n\
 // Callback for when a key is pressed
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods){
 
-    // Quit the program when pressing 'q'
+	//===================================================
+	// press S to stop all move  , press d to continue
+	if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+		allMoveStop = true;
+	}
+	if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+		allMoveStop = false;
+	}
+	//===================================================
+	 // Quit the program when pressing 'q'
     if (key == GLFW_KEY_Q && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, true);
     }
+
 }
+
 
 
 // Callback for when the window is resized
@@ -270,15 +307,18 @@ int main(void){
 		// first, get location:
 
 
-
 		GLint timeloc = glGetUniformLocation(program, "time");
-		GLint xLoc = glGetUniformLocation(program, "x");
+		GLint offsetLoc = glGetUniformLocation(program, "offset");  //get the coordinates relative to the original coordinates 
+		GLint colorLoc = glGetUniformLocation(program, "colorIn");
+
 
 
 
 		//now, you can set it:
 		glUniform1f(timeloc, 0.1f);
-		glUniform2f(xLoc, 0.2f, 0.2f);
+		glUniform2f(offsetLoc, 0.2f, 0.2f);
+
+
 
         // Set event callbacks
         glfwSetKeyCallback(window, KeyCallback);
@@ -291,7 +331,11 @@ int main(void){
 			GLfloat y = GLfloat(0.5)*GLfloat(rand()) / GLfloat(RAND_MAX);
 			GLfloat dx = GLfloat(0.008)*GLfloat(rand()) / GLfloat(RAND_MAX);
 			GLfloat dy = GLfloat(0.008)*GLfloat(rand()) / GLfloat(RAND_MAX);
-			objArr[i] = { x,y,dx,dy };
+			GLfloat r = GLfloat(rand()) / GLfloat(RAND_MAX);
+			GLfloat g = GLfloat(rand()) / GLfloat(RAND_MAX);
+			GLfloat b = GLfloat(i) / 5.0f;
+			GLfloat a = 1;
+			objArr[i] = { x,y,dx,dy,r,g,b,a };
 			printf("x,y: %f,%f  dx,dy:%f,%f\n", x, y, dx, dy);
 			objArrSize++;
 		}
@@ -321,23 +365,24 @@ int main(void){
 	
 			
 			for (int j = 0; j < objArrSize; ++j) {
-				objArr[j].x += objArr[j].dx;
-				objArr[j].y += objArr[j].dy;
-				if (objArr[j].x-0.2 < -1 || objArr[j].x+0.2 > 1) {
-					objArr[j].dx = -objArr[j].dx;
-				} else if (objArr[j].y -0.2 < -1 || objArr[j].y +0.2 > 1) {
-					objArr[j].dy = -objArr[j].dy;
+				if (allMoveStop == false) {
+					objArr[j].x += objArr[j].dx;
+					objArr[j].y += objArr[j].dy;
+					if (objArr[j].x - 0.2 < -1 || objArr[j].x + 0.2 > 1) {
+						objArr[j].dx = -objArr[j].dx;
+					}
+					else if (objArr[j].y - 0.2 < -1 || objArr[j].y + 0.2 > 1) {
+						objArr[j].dy = -objArr[j].dy;
+					}
+					printf("/n %d /n  x,y: %f,%f  dx,dy:%f,%f\n", j, objArr[j].x, objArr[j].y, objArr[j].dx, objArr[j].dy);
 				}
-				printf("/n %d /n  x,y: %f,%f  dx,dy:%f,%f\n",j ,objArr[j].x, objArr[j].y, objArr[j].dx, objArr[j].dy);
-				glUniform2f(xLoc, GLfloat(objArr[j].x), GLfloat(objArr[j].y));
+				glUniform2f(offsetLoc, GLfloat(objArr[j].x), GLfloat(objArr[j].y));
+				glUniform4f(colorLoc, objArr[j].r, objArr[j].g, objArr[j].b, 1);
 				glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
 			}
 			
 			
 			//glDrawArrays(GL_TRIANGLES, 0, 6); // if glDrawArrays is used, glDrawElements will be ignored 
-		//	glUniform2f(xLoc, 0.4f, 0.4f);
-			glDrawElements(GL_TRIANGLES, size, GL_UNSIGNED_INT, 0);
-
 
             // Update other events like input handling
             glfwPollEvents();
